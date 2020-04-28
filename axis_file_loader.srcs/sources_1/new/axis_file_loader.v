@@ -52,37 +52,40 @@ module axis_file_loader #
     reg [8*data_width-1:0] data_file_buffer = 0,result_file_buffer = 0;
 
     initial begin
-        data_file = $fopen(data_file_name,"rb");
-        if (!data_file) begin
-            $display("data_file handle was NULL");
-        end else begin
-            $display("normal!");
-        end
         @(posedge cfg_prepared);
-        @(posedge axis_aclk);
-        m_axis_tvalid_buf = 1;
-        while (!$feof(data_file)) begin
-            rv = $fread(data_file_buffer,data_file);
-            //write address
-            if(m_axis_tready)begin
-                m_axis_tdata_buf = 0;
-                m_axis_tkeep_buf = 8'h00;
-                for (i = 0;i<rv;i=i+1) begin
-                    m_axis_tkeep_buf[i] = 1;
-                    m_axis_tdata_buf[8*i+7-:8] = data_file_buffer[8*data_width-1-8*i-:8];
-                end
-                if($feof(data_file))begin
-                    m_axis_tlast_buf = 1;
-                end else begin
-                    m_axis_tlast_buf = 0;
-                end
-                @(posedge axis_aclk);
+        
+        while(1) begin
+            @(posedge axis_aclk);
+            data_file = $fopen(data_file_name,"rb");
+            if (!data_file) begin
+                $display("data_file handle was NULL");
             end else begin
-                @(posedge m_axis_tready);
+                $display("normal!");
             end
+            m_axis_tvalid_buf = 1;
+            while (!$feof(data_file)) begin
+                rv = $fread(data_file_buffer,data_file);
+                //write address
+                if(m_axis_tready)begin
+                    m_axis_tdata_buf = 0;
+                    m_axis_tkeep_buf = 8'h00;
+                    for (i = 0;i<rv;i=i+1) begin
+                        m_axis_tkeep_buf[i] = 1;
+                        m_axis_tdata_buf[8*i+7-:8] = data_file_buffer[8*data_width-1-8*i-:8];
+                    end
+                    if($feof(data_file))begin
+                        m_axis_tlast_buf = 1;
+                    end else begin
+                        m_axis_tlast_buf = 0;
+                    end
+                    @(posedge axis_aclk);
+                end else begin
+                    @(posedge m_axis_tready);
+                end
+            end
+            $fclose(data_file);
+            m_axis_tvalid_buf = 0;
         end
-        $fclose(data_file);
-        m_axis_tvalid_buf = 0;
     end
 
 endmodule
